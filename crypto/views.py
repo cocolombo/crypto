@@ -39,13 +39,33 @@ def ethereum_transactions(request):
                 block_resp = requests.get(latest_url, timeout=5)
                 if block_resp.status_code == 200:
                     block_data = block_resp.json()
-                    # On récupère les hash des transactions du dernier bloc
-                    for tx_hash in block_data.get('txids', [])[:10]:
-                        transactions.append({
-                            'hash': tx_hash,
-                            'amount': 'N/A', # Nécessiterait un appel API par transaction
-                            'time': datetime.now(timezone.utc) # On utilise maintenant UTC explicitement
-                        })
+                    
+                    # On limite à 3 transactions pour ne pas surcharger l'API (Rate Limit)
+                    for tx_hash in block_data.get('txids', [])[:3]:
+                        try:
+                            # Appel API pour chaque transaction pour avoir le montant
+                            tx_resp = requests.get(f'https://api.blockcypher.com/v1/eth/main/txs/{tx_hash}', timeout=3)
+                            if tx_resp.status_code == 200:
+                                tx_data = tx_resp.json()
+                                # Conversion Wei -> ETH (1 ETH = 10^18 Wei)
+                                amount_eth = tx_data.get('total', 0) / 10**18
+                                
+                                # Blockcypher donne le temps de réception
+                                received_time = tx_data.get('received')
+                                if received_time:
+                                    # Format ISO 8601 retourné par l'API (ex: 2023-10-27T10:00:00Z)
+                                    tx_time = datetime.fromisoformat(received_time.replace('Z', '+00:00'))
+                                else:
+                                    tx_time = datetime.now(timezone.utc)
+
+                                transactions.append({
+                                    'hash': tx_hash,
+                                    'amount': f"{amount_eth:.6f}", # Formatage à 6 décimales
+                                    'time': tx_time
+                                })
+                        except Exception as inner_e:
+                            print(f"Erreur détail transaction {tx_hash}: {inner_e}")
+
     except Exception as e:
         print(f"Erreur lors de la récupération des transactions Ethereum: {e}")
 
