@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 
 def bitcoin_transactions(request):
@@ -13,10 +13,14 @@ def bitcoin_transactions(request):
             for tx in data.get('txs', [])[:10]:
                 # Calcul du montant total en BTC (somme des sorties)
                 total_value = sum(out.get('value', 0) for out in tx.get('out', []))
+                # Le timestamp de l'API est en UTC (secondes depuis l'époque)
+                # On crée un objet datetime "aware" (avec info de fuseau horaire UTC)
+                tx_time = datetime.fromtimestamp(tx.get('time'), tz=timezone.utc)
+                
                 transactions.append({
                     'hash': tx.get('hash'),
                     'amount': total_value / 100000000.0, # Conversion Satoshi -> BTC
-                    'time': datetime.fromtimestamp(tx.get('time', datetime.now().timestamp()))
+                    'time': tx_time
                 })
     except Exception as e:
         print(f"Erreur lors de la récupération des transactions Bitcoin: {e}")
@@ -40,7 +44,7 @@ def ethereum_transactions(request):
                         transactions.append({
                             'hash': tx_hash,
                             'amount': 'N/A', # Nécessiterait un appel API par transaction
-                            'time': datetime.now() # Temps approximatif
+                            'time': datetime.now(timezone.utc) # On utilise maintenant UTC explicitement
                         })
     except Exception as e:
         print(f"Erreur lors de la récupération des transactions Ethereum: {e}")
