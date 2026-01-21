@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ethereum Transactions</title>
+</head>
+<body>
+    <h1>Latest {{ currency }} Transactions</h1>
+    <ul>
+        {% for tx in transactions %}
+            <li>Hash: {{ tx.hash }} - Amount: {{ tx.amount }} ETH - Time: {{ tx.time }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
